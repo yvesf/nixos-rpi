@@ -1,0 +1,8 @@
+{
+	"username": "jack",
+	"password": "foo",
+	"authorizedKeys": [ "ssh-rsa AAAAB3NzaC1yc2EAAAAWpkCFFiKZ3I/5" ],
+	"wireless": {
+		"funknetzwerk": { "psk": "1234" } 
+	}
+}

@@ -18,21 +18,7 @@
     },
     "root": {
       "inputs": {
-        "template": "template"
-      }
-    },
-    "template": {
-      "inputs": {
         "nixpkgs": "nixpkgs"
-      },
-      "locked": {
-        "narHash": "sha256-dQxUi4h3AWM3eSFdKSnGE435BjMSzqDGw7Z1i/QEvn8=",
-        "path": "../template",
-        "type": "path"
-      },
-      "original": {
-        "path": "../template",
-        "type": "path"
       }
     }
   },
