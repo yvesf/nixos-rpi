@@ -4,11 +4,11 @@
 
   outputs = { self, template }:
     let settings = builtins.fromJSON (builtins.readFile ./settings.json);
-    in {
+    in
+    {
       nixosConfigurations.rpi-ebus =
         template.makePi ({ hostname = "rpi-ebus"; } // settings) [
           ({ config, pkgs, lib, modulesPath, ... }: {
-            disabledModules = [ "services/databases/influxdb.nix" ];
             nixpkgs.config.packageOverrides = pkgs: {
               # grafana: somehow CGO is disabled on aarch64 implicitly. But required for sqlite3 in grafana
               grafana = pkgs.grafana.overrideAttrs (old: { CGO_ENABLED = 1; });
@@ -70,7 +70,6 @@
               serviceConfig = { User = settings.username; };
             };
           })
-          ./modules/influxdb.nix
         ];
     };
 }

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# This script is both for sending and receiving zfs snapshots
+# In the current version both sides have to use exact same naming of zfs fs
+# The receiving side can configure a restricted shell in authorized_keys like:
+# command="zfs-replicate-shell $SSH_ORIGINAL_COMMAND",no-port-forwarding,no-x11-forwarding,no-agent-forwarding KEY_TYPE KEY COMMENT
+# And then invoke via ssh without command like: 'ssh user@host receive'
+set -e -o pipefail
+PV_OPTS=
+
+SCRIPT=zfs-replicate-shell
+
+if [ "$1" == "$SCRIPT" ]; then
+    # if invoked via ssh remove first argument
+    shift
+fi
+
+PREFIX_STRIP=""
+PREFIX_ADD=""
+
+while getopts rB:L:s:a: opt; do
+	case $opt in
+		r) PV_OPTS="$PV_OPTS -r";;
+		B) PV_OPTS="$PV_OPTS -B $OPTARG";;
+		L) PV_OPTS="$PV_OPTS -L $OPTARG";;
+		s) PREFIX_STRIP="$OPTARG";;
+		a) PREFIX_ADD="$OPTARG";;
+		*) echo "usage: $0 [-r] [-B] [-L] [latest|receive|send]" >&2
+           exit 1 ;;
+	esac
+done
+
+shift $((OPTIND -1))
+
+pv_with_opts() {
+	if [ "$PV_OPTS" == "" ]; then
+		cat
+	else
+		pv $PV_OPTS
+	fi
+}
+
+case "$1" in
+	latest)
+		shift
+		{ zfs list -t snapshot -H "$1" 2>/dev/null || true; } | tail -n 1 | cut -f 1
+		exit 0
+		;;
+	receive)
+		shift
+		fs="$1"
+		# ensure fs exists:
+		zfs create -p "$fs"
+		# receive stream
+		zfs receive -F "$fs"
+		;;
+	send)
+		shift
+		host=$1
+		fs=$2
+
+		# map local fs name to remote name
+		fs_target="${fs#$PREFIX_STRIP*}"
+		fs_target="${PREFIX_ADD}${fs_target}"
+	
+		remote_latest=$(ssh "$host" $SCRIPT latest "$fs_target")
+		local_latest=$(zfs list -t snapshot -H "$fs" | tail -n 1 | cut -f 1)
+		if [ -z "$remote_latest" ]; then # send full snapshot
+			echo "send initial $fs to $fs_target" >&2
+			zfs send "$local_latest" \
+				| pv_with_opts \
+				| ssh "$host" $SCRIPT receive "$fs_target"
+			exit $?
+		fi
+
+		# map remote name to local name
+		remote_latest_local="$remote_latest"
+		remote_latest_local="${remote_latest_local#$PREFIX_ADD}*"
+		remote_latest_local="${PREFIX_STRIP}${remote_latest_local}"
+
+		# verify that remote latest exists locally for incremental send
+		if ! zfs list -H "$remote_latest_local" 2>/dev/null >&2; then
+			echo "latest remote does not exist locally" >&2
+			exit 1
+		fi
+
+		# verify that remote_latest != local_latest
+		if [ "$remote_latest_local" == "$local_latest" ]; then
+			echo "remote == local. nothing to do" >&2
+			exit 0
+		fi
+
+		echo "send incremental $fs to $fs_target" >&2
+		zfs send -I "$remote_latest" "$local_latest" \
+			| pv_with_opts \
+			| ssh "$host" $SCRIPT receive "$fs_target"
+		;;
+	*)
+		echo "Unknown command $1"
+		exit 1
+		;;
+esac
+

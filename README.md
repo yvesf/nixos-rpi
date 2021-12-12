@@ -6,12 +6,16 @@ It makes use of cross-compilation, that means just the output nix derivations ar
 Everything is built on the local machine. However, unlike x86-64 it also has to be built because there are no
 prebuilts for this in the official Nixos cache.
 
+- rpi-backup: very simple tailored zfs backup solution
+- rpi-ebus: tracks heating devices with influxdb and grafana
+- rpi-scanner: document scan+ocr appliance
+- rpi-solar: unfinished solar power tracking
+
 ## build image for sd-card
 This is for the initial Installation on a SD-Card or USB-Stick.
 
 ```shell
-$ TARGET=$(basename $PWD)
-$ nix build path:.#nixosConfigurations.${TARGET}.sdImage
+$ nix build path:.#nixosConfigurations.$(basename $PWD).sdImage
 $ sudo dd bs=1024 if="$(readlink -f result/sd-image/nixos-sd-image-*.img)" status=progress conv=fsync of=/dev/DEVICE
 ```
 
@@ -22,7 +26,7 @@ $ sudo dd bs=1024 if="$(readlink -f result/sd-image/nixos-sd-image-*.img)" statu
 This is for updates from remote while the target system is already running and reachable via ssh.
 
 ```shell
-$ nixos-rebuild --use-remote-sudo --target-host jack@${TARGET} --build-host localhost switch --flake path:.#${TARGET}
+$ nixos-rebuild --use-remote-sudo --target-host jack@$(basename $PWD) --build-host localhost switch --flake path:.#$(basename $PWD)
 
 building the system configuration...
 copying 1 paths...
@@ -31,8 +35,8 @@ setting up /etc...
 setting up tmpfiles
 ```
 
-## creating the /data partition on an usb stick
-All system configuration here assume another ext4 partition that will be mounted under /data for mutable data.
+## creating the /var partition on an usb stick
+All system configuration here assume another ext4 partition that will be mounted under /var for mutable data.
 
 ```shell
 $ lsblk
@@ -50,7 +54,7 @@ for f in /var/lib/i2pd/*keys; do echo "$f: $(head -c 391 $f | sha256sum | cut -f
 
 On local computer start i2pd (and wait a bit):
 ```shell
-nix run nixpkgs/nixos-21.05#i2pd -- --loglevel info
+nix run nixpkgs/nixos-21.11#i2pd -- --loglevel info
 ```
 
 Configure SSH for i2p in `~/.ssh/config`:

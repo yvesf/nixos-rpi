@@ -1,0 +1,12 @@
+{
+	"username": "jack",
+	"password": "foo",
+	"authorizedKeys": [ "ssh-rsa AAAAB3NzaC1yc2EAAAAWpkCFFiKZ3I/5" ],
+	"rootAuthorizedKeys": [ "command=\"zfs-replicate-shell $SSH_ORIGINAL_COMMAND\",no-port-forwarding,no-x11-forwarding,no-agent-forwarding ssh-rsa AAAAB3NzaCxxxxxxx" ],
+		"wireless": {
+		"funknetzwerk": { "psk": "1234" } 
+	},
+	"sourceHost": "debian-zfsNAS-server",
+	"sourceUser": "jack",
+	"targetHost": "rpi-backup.domain.tld"
+}

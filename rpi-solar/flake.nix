@@ -8,7 +8,6 @@
       nixosConfigurations.rpi-solar =
         template.makePi ({ hostname = "rpi-solar"; } // settings) [
           ({ config, pkgs, lib, modulesPath, ... }: {
-            disabledModules = [ "services/databases/influxdb.nix" ];
             nixpkgs.config.packageOverrides = pkgs: {
               # grafana: somehow CGO is disabled on aarch64 implicitly. But required for sqlite3 in grafana
               grafana = pkgs.grafana.overrideAttrs (old: { CGO_ENABLED = 1; });
@@ -56,6 +55,15 @@
                 };
               };
             };
+            # run dnsmasq to give addresses to the inverter
+            services.dnsmasq = {
+              enable = true;
+              extraConfig = ''
+                interface = eth0;
+				dhcp-range=eth0,192.168.1.100,192.168.1.199,15m
+				no-resolv
+              '';
+            };
             services.i2pd = {
               enable = true;
               inTunnels = {
@@ -66,6 +74,8 @@
                   address = "::1";
                   destination = "::1";
                   port = 22;
+                  inbound.length = 0;
+                  outbound.length = 0;
                 };
                 http = {
                   enable = true;
@@ -74,11 +84,12 @@
                   address = "::1";
                   destination = "::1";
                   port = 80;
+                  inbound.length = 0;
+                  outbound.length = 0;
                 };
               };
             };
           })
-          ./modules/influxdb.nix
         ];
     };
 }

@@ -62,6 +62,7 @@ let
         pkgs.coreutils
         pkgs.sane-backends
         pkgs.imagemagick
+        pkgs.ocrmypdf
       ]
     }
     export SANE_CONFIG_DIR=/etc/scanbd
@@ -80,7 +81,7 @@ let
       copy)
         scanimage --format pnm --resolution 100 --mode Color -l 0 -t 0 -x 210mm -y 297mm |
           convert pnm:- -rotate 180 jpg:"$OUTFILE.jpg"
-        chmod 664 $OUTFILE.jpg              
+        chmod 664 $OUTFILE.jpg
         ;;
       file)
         scanimage --format pnm --resolution 300 --mode Color -l 0 -t 0 -x 210mm -y 297mm |
@@ -90,9 +91,9 @@ let
       email)
         # broken because dependencies of ocrmypdf don't cross-compile yet
         scanimage --format pnm --resolution 300 --mode Gray -l 0 -t 0 -x 210mm -y 297mm |
-            pnmflip -rotate180 > $OUTFILE.part.pnm
-        ocrmypdf -c -l deu --image-dpi 300 --tesseract-timeout 720 $OUTFILE.part.pnm $OUTFILE
-        rm $OUTFILE.part.pnm
+          convert pnm:- -rotate 180 -compress jpeg -quality 80 -page A4 pdf:"$OUTFILE.part.pdf"
+        ocrmypdf -c -l deu --tesseract-timeout 720 "$OUTFILE.part.pdf" "$OUTFILE.pdf"
+        rm "$OUTFILE.part.pdf"
         ;;
       *)
         echo "Invalid action $SCANBD_ACTION"
