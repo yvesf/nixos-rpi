@@ -74,12 +74,12 @@ case "$1" in
 
 		# map remote name to local name
 		remote_latest_local="$remote_latest"
-		remote_latest_local="${remote_latest_local#$PREFIX_ADD}*"
+		remote_latest_local="${remote_latest_local#$PREFIX_ADD}"
 		remote_latest_local="${PREFIX_STRIP}${remote_latest_local}"
 
 		# verify that remote latest exists locally for incremental send
 		if ! zfs list -H "$remote_latest_local" 2>/dev/null >&2; then
-			echo "latest remote does not exist locally" >&2
+			echo "latest remote does not exist locally: $fs => $remote_latest_local" >&2
 			exit 1
 		fi
 
@@ -90,7 +90,7 @@ case "$1" in
 		fi
 
 		echo "send incremental $fs to $fs_target" >&2
-		zfs send -I "$remote_latest" "$local_latest" \
+		zfs send -I "$remote_latest_local" "$local_latest" \
 			| pv_with_opts \
 			| ssh "$host" $SCRIPT receive "$fs_target"
 		;;
