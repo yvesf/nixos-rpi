@@ -92,8 +92,10 @@ let
         # broken because dependencies of ocrmypdf don't cross-compile yet
         scanimage --format pnm --resolution 300 --mode Gray -l 0 -t 0 -x 210mm -y 297mm |
           convert pnm:- -rotate 180 -compress jpeg -quality 80 -page A4 pdf:"$OUTFILE.part.pdf"
-        ocrmypdf -c -l deu --tesseract-timeout 720 "$OUTFILE.part.pdf" "$OUTFILE.pdf"
-        rm "$OUTFILE.part.pdf"
+        (
+          ocrmypdf -c -l deu --tesseract-timeout 720 "$OUTFILE.part.pdf" "$OUTFILE.pdf"
+          rm "$OUTFILE.part.pdf"
+        ) &
         ;;
       *)
         echo "Invalid action $SCANBD_ACTION"
