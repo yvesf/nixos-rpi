@@ -31,7 +31,7 @@
               interval = "Sun, 02:00";
             };
             users.users.root = {
-              openssh.authorizedKeys.keys = settings.rootAuthorizedKeys;
+              openssh.authorizedKeys.keys = config.settings.rootAuthorizedKeys;
             };
             environment.systemPackages = [
               (pkgs.runCommand "zfs-replicate-shell" { } ''
@@ -40,6 +40,7 @@
               '')
             ];
           })
+          template.nixosModules.networkingCableDHCP
         ];
     } // flake-utils.lib.eachDefaultSystem (system:
       # Developer shell: $ nix develop path:.

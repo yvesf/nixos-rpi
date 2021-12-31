@@ -90,6 +90,8 @@
               };
             };
           })
+
+					template.nixosModules.networkingWifi
         ];
     };
 }

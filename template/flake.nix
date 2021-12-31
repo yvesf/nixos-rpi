@@ -1,18 +1,49 @@
 {
-  inputs.nixpkgs.url =
-    #    "/home/yvesf/vcs/nixpkgs";
-    #    "github:nixpkgs/nixpkgs?rev=
-    #"github:NixOS/nixpkgs/1fa5e13f30c60890b01475d7945a17ca5721a5f2";
-    #    "github:NixOS/nixpkgs/1ab1b4561d28366e366167c658b7390a04ef867d";
-    "nixpkgs/nixos-21.11";
-  #    "github:NixOS/nixpkgs/5cb226a06c49f7a2d02863d0b5786a310599df6b";
-  #"git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable&rev=5cb226a06c49f7a2d02863d0b5786a310599df6b";
+  inputs.nixpkgs.url = "nixpkgs/nixos-21.11";
   outputs = { self, nixpkgs }: {
+  	nixosModules = {
+  		# Networking option to use wifi and the "wireless" configuration from settings
+  		networkingWifi = ({ config, pkgs, lib, modulesPath, ... }: {
+				options = {};
+				 config = {
+           networking.useDHCP = true;
+           networking.wireless.enable = true;
+           # workaround for #101963:
+           networking.wireless.interfaces = [ "wlan0" ];
+           networking.wireless.networks = config.settings.wireless;
+           networking.interfaces.eth0.ipv4.addresses = [{
+             address =
+               "192.168.1.1"; # allows easy local access if wifi is broken
+             prefixLength = 24;
+           }];
+
+				};
+  		});
+  		networkingCableDHCP = ({ config, pkgs, lib, modulesPath, ... }: {
+      	options = {};
+      	 config = {
+           networking.useDHCP = true;
+           networking.wireless.enable = false;
+           networking.interfaces.eth0.useDHCP = true;
+      	};
+      });
+  	};
     makePi = settings: modules:
       let
         sys = (nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           modules = [
+            # this module just sets the "settings"
+            ({ lib, ...}:{
+              options = {
+                settings = lib.mkOption {
+                	default = settings;
+                	description = "json settings";
+                	type = lib.types.attrs;
+                };
+              };
+            })
+            # base configuration
             ({ config, pkgs, lib, modulesPath, ... }: {
               disabledModules = [
                 "services/databases/influxdb.nix" # replaced by ./modules/influxdb.nix
@@ -61,14 +92,14 @@
               # this goes a bit further than minimal.nix to reduce glibc size
               i18n.supportedLocales = [ "en_US.UTF-8/UTF-8" ];
 
-              nix.trustedUsers = [ settings.username ];
+              nix.trustedUsers = [ config.settings.username ];
               users.mutableUsers = false;
-              users.users."${settings.username}" = {
-                password = settings.password;
+              users.users."${config.settings.username}" = {
+                password = config.settings.password;
                 isNormalUser = true;
                 extraGroups = [ "wheel" "dialout" ];
                 uid = 1000;
-                openssh.authorizedKeys.keys = settings.authorizedKeys;
+                openssh.authorizedKeys.keys = config.settings.authorizedKeys;
               };
               security.sudo.wheelNeedsPassword = false;
 
@@ -88,9 +119,6 @@
               boot.loader.grub.enable = false;
               sdImage.compressImage = false;
 
-              hardware.firmware =
-                lib.mkForce [ pkgs.raspberrypiWirelessFirmware ];
-
               security.polkit.enable = false;
               services.udisks2.enable = false;
               xdg.sounds.enable = false;
@@ -105,22 +133,13 @@
               # supportedLocales is set by profiles/minimal
               i18n.defaultLocale = "en_US.UTF-8";
 
-              networking.useDHCP = true;
-              networking.wireless.enable = true;
-              # workaround for #101963:
-              networking.wireless.interfaces = [ "wlan0" ];
-              networking.wireless.networks = settings.wireless;
-              networking.interfaces.eth0.ipv4.addresses = [{
-                address =
-                  "192.168.1.1"; # allows easy local access if wifi is broken
-                prefixLength = 24;
-              }];
+              hardware.firmware = lib.mkForce [ pkgs.raspberrypiWirelessFirmware ];
+
+							networking.hostName = config.settings.hostname;
 
               # disable packages to reduce size
               environment.defaultPackages = [ ];
               environment.systemPackages = [ pkgs.vim ];
-
-              networking.hostName = settings.hostname;
 
               nix.gc = {
                 automatic = true;

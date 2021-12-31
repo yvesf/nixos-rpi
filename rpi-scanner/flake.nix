@@ -4,8 +4,7 @@
 
   outputs = { self, template }:
     let settings = builtins.fromJSON (builtins.readFile ./settings.json);
-    in
-    {
+    in {
       nixosConfigurations.rpi-scanner =
         template.makePi ({ hostname = "rpi-scanner"; } // settings) [
           ({ config, pkgs, lib, modulesPath, ... }: {
@@ -31,11 +30,11 @@
 
                 postInstall = (lib.optionalString
                   (pkgs.stdenv.buildPlatform != pkgs.stdenv.targetPlatform) ''
-                  # Workaround for cross-compilation issue: cannot execute sane-desc
-                  mkdir -p tools/udev
-                  touch tools/udev/libsane.rules
-                  touch $out/etc/sane.d/net.conf
-                '') + old.postInstall;
+                    # Workaround for cross-compilation issue: cannot execute sane-desc
+                    mkdir -p tools/udev
+                    touch tools/udev/libsane.rules
+                    touch $out/etc/sane.d/net.conf
+                  '') + old.postInstall;
               });
 
               # scanbd: resolve compilation issue
@@ -45,10 +44,10 @@
               }).overrideAttrs (old: rec {
                 configureFlags = (lib.optionals
                   (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) [
-                  # AC_FUNC_MALLOC is broken on cross builds.
-                  "ac_cv_func_malloc_0_nonnull=yes"
-                  "ac_cv_func_realloc_0_nonnull=yes"
-                ]) ++ old.configureFlags;
+                    # AC_FUNC_MALLOC is broken on cross builds.
+                    "ac_cv_func_malloc_0_nonnull=yes"
+                    "ac_cv_func_realloc_0_nonnull=yes"
+                  ]) ++ old.configureFlags;
                 postInstall = ''
                   install -Dm644 integration/scanbd_dbus.conf $out/share/dbus-1/system.d/scanbd.conf
                   substituteInPlace $out/share/dbus-1/system.d/scanbd.conf \
@@ -130,9 +129,7 @@
               });
 
               # unbound: cannot execute "unittest" (check) with binary compiled for other architecture
-              unbound = pkgs.unbound.overrideAttrs (old: {
-                preFixup = "";
-              });
+              unbound = pkgs.unbound.overrideAttrs (old: { preFixup = ""; });
 
               # mupdf: expects the native version of pkg-config under the name pkg-config and not with platform prefix
               mupdf = (pkgs.mupdf.overrideAttrs (old: {
@@ -162,9 +159,8 @@
               });
 
               # tesseract4: just german language to save space
-              tesseract4 = pkgs.tesseract4.override {
-                enableLanguages = [ "deu" "eng" ];
-              };
+              tesseract4 =
+                pkgs.tesseract4.override { enableLanguages = [ "deu" "eng" ]; };
             };
 
             # Project specific configuration:
@@ -192,6 +188,8 @@
               serviceConfig.User = "root";
             };
           })
+
+          template.nixosModules.networkingWifi
 
           ./scanbd
         ];

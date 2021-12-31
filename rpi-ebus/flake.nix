@@ -1,8 +1,10 @@
 {
   description = "raspberry pi image for heating device";
   inputs.template.url = "path:../template";
+  inputs.ebus.url = "github:yvesf/ebus";
+  inputs.ebus.inputs.nixpkgs.follows = "template/nixpkgs";
 
-  outputs = { self, template }:
+  outputs = { self, template, ebus }:
     let settings = builtins.fromJSON (builtins.readFile ./settings.json);
     in
     {
@@ -12,8 +14,6 @@
             nixpkgs.config.packageOverrides = pkgs: {
               # grafana: somehow CGO is disabled on aarch64 implicitly. But required for sqlite3 in grafana
               grafana = pkgs.grafana.overrideAttrs (old: { CGO_ENABLED = 1; });
-              # ebus: our custom ebus parser
-              ebus = (pkgs.callPackage ./ebus-rust { });
             };
 
             services.influxdb.enable = true;
@@ -59,17 +59,14 @@
                 };
               };
             };
-            systemd.services.ebus = {
-              description = "ebus protocol parser and influxdb inserter";
-              wantedBy = [ "multi-user.target" ];
-              after = [ "networking.target" "influxdb.service" ];
-              script = ''
-                ${pkgs.coreutils}/bin/stty 9600 < /dev/ttyUSB0
-                RUST_LOG=info ${pkgs.ebus}/bin/ebus --enhanced influxdb < /dev/ttyUSB0
-              '';
-              serviceConfig = { User = settings.username; };
-            };
+
+            services.ebus-rust.enable = true;
+            services.ebus-rust.user = settings.username;
+            services.ebus-rust.device = "/dev/ttyUSB0";
           })
+
+					template.nixosModules.networkingWifi
+					ebus.nixosModules.ebus-rust
         ];
     };
 }
